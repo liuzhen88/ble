@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>蓝牙绑定接口测试</title>
+
+<style>
+table{
+	width: 100%;
+}
+table, th, td {
+	border: solid #ccc 1px;
+}
+#page-container{
+	text-align: right;
+	padding: 30px;
+}
+.page{
+	padding: 3px 10px;
+	border: solid #ccc 1px;
+	cursor: pointer;
+}
+.active {
+	color: red;
+}
+</style>
+<script type="text/javascript" src="jquery-1.9.1.min.js"></script>
+<script type="text/javascript">
+  //登陆
+  // http://47.98.37.235:8080/airconditioner/
+  function testLogin(){
+	  $.ajax({
+			url:"http://47.98.37.235:8080/airconditioner/rest/user/login",
+			type:"post",
+			datatype:"json",
+			data:{ usercode:"admin", userpassword:"1", tm:(new Date()).getTime() },
+			success:function(ret){
+				if(ret=="")
+					alert("登陆成功!");
+				else
+					alert(ret);
+			}
+		});
+  }
+  
+  //查询用户信息
+  function testFind(){
+	  $.ajax({
+			url:"http://47.98.37.235:8080/airconditioner/rest/user/admin?tm="+(new Date()).getTime(),
+			type:"get",
+			success:function(ret){
+				console.log(ret);
+				alert(ret);
+			}
+		});
+  }
+  
+  //绑定蓝牙
+  function testBind(){
+	  $.ajax({
+			url:"http://47.98.37.235:8080/airconditioner/rest/basic/bind",
+			type:"post",
+			datatype:"json",
+			data:{ 
+				bindUserId:1, 
+				assetnum:"at02",
+				bluetoothCode:"bt02", 
+				tm:(new Date()).getTime() 
+			},
+			success:function(ret){
+				if(ret=="")
+					alert("绑定成功!");
+				else
+					alert(ret);
+			}
+		});
+  } 
+  
+  //通过机器编号绑定信息
+  function testBindFind(){
+	  $.ajax({
+			url:"http://47.98.37.235:8080/airconditioner/rest/basic/bind/at02?tm="+(new Date()).getTime(),
+			type:"get",
+			success:function(ret){
+				console.log(ret);
+				alert(ret);
+			}
+		});
+  }
+  
+
+  //分页查询绑定信息
+  function testBindPage(){
+	  $.ajax({
+		    url: "http://47.98.37.235:8080/airconditioner/rest/basic/binds/st/2019-07-01 00:00:00/et/2019-08-01 00:00:00/ps/20/pi/0?tm="+(new Date()).getTime(),
+			type:"get",
+			success:function(ret){
+				let data = JSON.parse(ret);
+				console.log(data);
+			}
+		});
+  }
+  
+  //通过机器编号删除绑定信息
+  function testBindDelete(){
+	  $.ajax({
+			url:"http://47.98.37.235:8080/airconditioner/rest/basic/bind/at02?tm="+(new Date()).getTime(),
+			type:"delete",
+			success:function(ret){
+				if(ret=="")
+					alert("删除绑定成功!");
+				else
+					alert(ret);
+			}
+		});
+  }
+</script>
+</head>
+
+<body>
+   <input type="button" onclick="testLogin();" value="登陆测试" />
+   <input type="button" onclick="testFind();" value="查询用户测试" />
+   <input type="button" onclick="testBind();" value="绑定蓝牙" />
+   <input type="button" onclick="testBindFind();" value="通过机器编号查询绑定信息" />
+   <input type="button" onclick="testBindPage();" value="分页查询绑定信息" />
+	 <input type="button" onclick="testBindDelete();" value="通过机器编号删除绑定信息" />
+	 
+
+	 <div>
+		 <table>
+			 <thead>
+				<tr>
+					<th>绑定id</th>
+					<th>机器条形码</th>
+					<th>蓝牙条形码</th>
+					<th>绑定时间</th>
+					<th>绑定用户ID</th>
+				</tr>
+			 </thead>
+			 <tbody id='tbody'>
+				
+			 </tbody>
+		 </table>
+	 </div>
+
+	 <div id='page-container'></div>
+</body>
+
+<script type="text/javascript">
+
+// 每页展示数据的大小
+var pageSize = 1;
+
+var app = {
+	init() {
+		this.request(0, function(data) {
+			var total = data.totalPages;
+			var pages = '';
+			for(let i=0; i< total; i++) {
+				pages += "<a class='page' onclick='app.request("+i+")'>"+(i+1)+"</a>";
+			}
+			$("#page-container").empty();
+			$("#page-container").append(pages);
+			
+			$('.page').eq(0).addClass('active');
+		});
+	},
+	request(page, cb) {
+		$('.page').removeClass('active');
+
+		$('.page').eq(page).addClass('active');
+
+		$.ajax({
+			url: "http://47.98.37.235:8080/airconditioner/rest/basic/binds/st/2019-07-01 00:00:00/et/2019-08-01 00:00:00/ps/"+pageSize+"/pi/"+page+"?tm="+(new Date()).getTime(),
+			type:"get",
+			dataType: 'json',
+			success:function(ret){
+				let data = JSON.parse(ret);
+				$('#tbody').empty();
+				var sub = "";
+				data.pageList.map(function(item, index){
+					sub += "<tr>"
+					+		"<td>"+item.bindId+"</td>"	
+					+		"<td>"+item.assetnum+"</td>"	
+					+		"<td>"+item.bluetoothCode+"</td>"	
+					+		"<td>"+item.bindTime+"</td>"	
+					+		"<td>"+item.bindUserId+"</td>"	
+					+ "</tr>"
+				})
+
+				$("#tbody").append(sub);
+				cb && cb(data);
+			}
+		});
+	}
+}
+
+
+
+window.onload = function () {
+	app.init();
+}
+</script>
+</html>
